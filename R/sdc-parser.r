@@ -381,7 +381,7 @@ sdc.parse.jv.csr <- function(records
         str.replace("-+[^-/]*$", "") %>%
         stringi::stri_split_fixed("/") %>%
         parallel::mclapply(stringr::str_trim)
-    message("\t\done")
+    message("\tdone")
   }
   ## Financial
   if("financial" %in% fields | is.na(fields)) {
