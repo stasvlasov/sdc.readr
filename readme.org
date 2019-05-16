@@ -1,0 +1,40 @@
+#+title: sdcreadr - An R package that reads plain text reports from SDC Platinum database
+
+It is a convenience package that makes it easier to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are welcome.
+
+SDC Platinum description: https://www.refinitiv.com/en/products/sdc-platinum-financial-securities
+
+* Installation
+
+#+BEGIN_SRC R
+  ## Loads devtools and installs it if not yet installed
+  if (!require("devtools", character.only = TRUE)) {
+      install.packages("devtools", repos = 'http://cloud.r-project.org')
+      library("devtools", character.only = TRUE)
+  }
+  ## Installs and loads harmonizer
+  install_github("stasvlasov/sdc.readr")
+  library("sdc.readr")
+#+END_SRC
+
+* Main function
+The main function is sdc.read. It returns a data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
+
+Accepts following parameters:
+- sdc.file.name :: Filename of SDC Platinum plain text report
+- sdc.dir :: Location of SDC Platinum plain text report. Current working directory is assumed by default.
+- data.type :: Type of SDC Platinum database. Only Joint Ventures - "jv" is currently supported. M&A, Venture Experts and so forth could be added in future. Default is "jv"
+- report.type :: Type of plain text report. Two types are currently supported. "csr" - Comprehensive Summary Report and "lp" - List of Participants. Default is "csr".
+- fields :: Which fields to parse from the report. Depends on report type. For the "csr" (Comprehensive Summary Report) following fields are available - "name", "participants", "participants.details", "financial", "deal.type", "date.announced", "date.agreement", "involving", "location", "synopsis", "activity". Default value is NA which means include all fields available. Specifying just a few fields increases speed of parsing.
+
+#+BEGIN_SRC R :exports code
+  sdc.read(sdc.file.name
+         , sdc.dir = getwd()
+         , data.type = "jv"
+         , report.type = "csr"
+         , fields = NA)
+
+  ## Wrappers
+  sdc.read.jv.lp()
+  sdc.read.jv.csr()
+#+END_SRC
