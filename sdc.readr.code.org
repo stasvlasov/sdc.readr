@@ -131,19 +131,19 @@
   ## --------------------------------------------------------------------------------
   #' @import magrittr
   dur.from <- function(start.time) {
-      Sys.time() %>% 
-          subtract(start.time) %>%
-          as.numeric %>%
-          humanFormat::formatSeconds()
+    Sys.time() %>% 
+      subtract(start.time) %>%
+      as.numeric %>%
+      humanFormat::formatSeconds()
   }
 
 
   ## Iterative function application with message.n
   pipe.fun.list <- function(x, fun.list) {
-      for(fun in fun.list)
-          x <- if (!is.list(fun)) fun(x)
-               else do.call(fun[[1]], c(list(x), fun[-1]))
-      return(x)
+    for(fun in fun.list)
+      x <- if (!is.list(fun)) fun(x)
+           else do.call(fun[[1]], c(list(x), fun[-1]))
+    return(x)
   }
 
   ## Tests:
@@ -154,13 +154,13 @@
   pipe.fun.list.n <- function(fun.list, x
                             , message = ".\t"
                             , appendLF = FALSE) {
-      for(i in 1:length(fun.list)) {
-          message(i, ".\t", appendLF = FALSE)    
-          fun <- fun.list[[i]]
-          x <- if (!is.list(fun)) fun(x)
-               else do.call(fun[[1]], c(list(x), fun[-1]))
-      }
-      return(x)
+    for(i in 1:length(fun.list)) {
+      message(i, ".\t", appendLF = FALSE)    
+      fun <- fun.list[[i]]
+      x <- if (!is.list(fun)) fun(x)
+           else do.call(fun[[1]], c(list(x), fun[-1]))
+    }
+    return(x)
   } 
 
   ## c(0.3) %>% pipe.fun.list.n(list(sum, sqrt, log, abs))
@@ -195,55 +195,118 @@
   ## no forking... (whatever that means)
   ## stringr::str_trim
   str.trim <- function(x, ...) {
-  cl <- parallel::makeCluster(parallel::detectCores())
-  x <- clusterSplit(cl, x)
-  x <- parallel::clusterApply(cl, x, stringr::str_trim, ...)
-  x <- unlist(x, recursive = FALSE)
-  parallel::stopCluster(cl)
-  return(x)
+    if(exists("cl")) {
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_trim, ...)
+      x <- unlist(x, recursive = FALSE)
+      return(x) 
+    } else {
+      cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_trim, ...)
+      x <- unlist(x, recursive = FALSE)
+      parallel::stopCluster(cl)
+      return(x) 
+    } 
   }
 
   ## stringr::str_extract
   str.extract <- function(x, ...) {
-  cl <- parallel::makeCluster(parallel::detectCores())
-  x <-  clusterSplit(cl, x)
-  x <- parallel::clusterApply(cl, x, stringr::str_extract, ...)
-  x <- unlist(x, recursive = FALSE)
-  parallel::stopCluster(cl)
-  return(x)
+    if(exists("cl")) {
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_extract, ...)
+      x <- unlist(x, recursive = FALSE)
+      return(x) 
+    } else {
+      cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_extract, ...)
+      x <- unlist(x, recursive = FALSE)
+      parallel::stopCluster(cl)
+      return(x) 
+    } 
   }
 
   ## stringr::str_detect
   str.detect <- function(x, ...) {
-  cl <- parallel::makeCluster(parallel::detectCores())
-  x <-  clusterSplit(cl, x)
-  x <- parallel::clusterApply(cl, x, stringr::str_detect, ...)
-  x <- unlist(x, recursive = FALSE)
-  parallel::stopCluster(cl)
-  return(x)
+    if(exists("cl")) {
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_detect, ...)
+      x <- unlist(x, recursive = FALSE)
+      return(x) 
+    } else {
+      cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_detect, ...)
+      x <- unlist(x, recursive = FALSE)
+      parallel::stopCluster(cl)
+      return(x) 
+    } 
   }
 
   ## stringr::str_replace
   str.replace <- function(x, ...) {
-  cl <- parallel::makeCluster(parallel::detectCores())
-  x <-  clusterSplit(cl, x)
-  x <- parallel::clusterApply(cl, x, stringr::str_replace, ...)
-  x <- unlist(x, recursive = FALSE)
-  parallel::stopCluster(cl)
-  return(x)
+    if(exists("cl")) {
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_replace, ...)
+      x <- unlist(x, recursive = FALSE)
+      return(x) 
+    } else {
+      cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_replace, ...)
+      x <- unlist(x, recursive = FALSE)
+      parallel::stopCluster(cl)
+      return(x) 
+    } 
   }
 
   ## stringr::str_replace_all
   str.replace.all <- function(x, ...) {
-  cl <- parallel::makeCluster(parallel::detectCores())
-  x  <-  clusterSplit(cl, x)
-  x <- parallel::clusterApply(cl, x, stringr::str_replace_all, ...)
-  x  <- unlist(x, recursive = FALSE)
-  parallel::stopCluster(cl)
-  return(x)
+    if(exists("cl")) {
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_replace_all, ...)
+      x <- unlist(x, recursive = FALSE)
+      return(x) 
+    } else {
+      cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
+      x <- clusterSplit(cl, x)
+      x <- parallel::clusterApply(cl, x, stringr::str_replace_all, ...)
+      x <- unlist(x, recursive = FALSE)
+      parallel::stopCluster(cl)
+      return(x) 
+    }
+  }
+
+  ## lapply
+  plapply <- function(x, fun, ...) {
+    if(exists("cl")) {
+      x <- parallel::parLapply(cl, x, fun, ...)
+      return(x)
+    } else {
+      cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
+      x <- parallel::parLapply(cl, x, fun, ...)
+      parallel::stopCluster(cl)
+      return(x)
+    }
   }
 
 
+  ## tests
+  ## --------------------------------------------------------------------------------
+
+  ## system.time("bananas, mangos, oranges & kiwis" %>%
+  ##             paste(1:1000000) %>% 
+  ##             str.replace.all("[ab]+(.)", "\\1\\1"))
+
+
+  ## system.time("bananas, mangos, oranges & kiwis" %>%
+  ##             paste(1:1000000) %>% 
+  ##             str_replace_all("[ab]+(.)", "\\1\\1"))
+
+
+  ## system.time(lapply(1:4,function(x) Sys.sleep(1)))
+  ## system.time(clusterApply(cl, 1:4,function(x) Sys.sleep(1)))
 #+END_SRC
 
 
