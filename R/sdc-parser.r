@@ -40,25 +40,64 @@ pipe.fun.list.n <- function(fun.list, x
 ## Parallelisation of functions
 ## getOption("cores") - does not work on windows... (blade - 48)
 
+## ## stringr::str_trim
+## str.trim <- function(x, ...) 
+##   parallel::pvec(x, stringr::str_trim, ..., mc.cores = parallel::detectCores())
+
+## ## stringr::str_extract
+## str.extract <- function(x, ...) 
+##   parallel::pvec(x, stringr::str_extract, ..., mc.cores = parallel::detectCores())
+
+## ## stringr::str_detect
+## str.detect <- function(x, ...) 
+##   parallel::pvec(x, stringr::str_detect, ..., mc.cores = parallel::detectCores())
+
+## ## stringr::str_replace
+## str.replace <- function(x, ...) 
+##   parallel::pvec(x, stringr::str_replace, ..., mc.cores = parallel::detectCores())
+
+## ## stringr::str_replace_all
+## str.replace.all <- function(x, ...) 
+##   parallel::pvec(x, stringr::str_replace_all, ..., mc.cores = parallel::detectCores())
+
+
+
+
+## no forking... (whatever that means)
 ## stringr::str_trim
-str.trim <- function(x, ...) 
-  parallel::pvec(x, stringr::str_trim, ..., mc.cores = parallel::detectCores())
+str.trim <- function(x, ...) {
+cl <- parallel::makeCluster(parallel::detectCores())
+parallel::clusterApply(cl, x, stringr::str_trim, ...)
+parallel::stopCluster(cl)
+}
 
 ## stringr::str_extract
-str.extract <- function(x, ...) 
-  parallel::pvec(x, stringr::str_extract, ..., mc.cores = parallel::detectCores())
+str.extract <- function(x, ...) {
+cl <- parallel::makeCluster(parallel::detectCores())
+parallel::clusterApply(cl, x, stringr::str_extract, ...)
+parallel::stopCluster(cl)
+}
 
 ## stringr::str_detect
-str.detect <- function(x, ...) 
-  parallel::pvec(x, stringr::str_detect, ..., mc.cores = parallel::detectCores())
+str.detect <- function(x, ...) {
+cl <- parallel::makeCluster(parallel::detectCores())
+parallel::clusterApply(cl, x, stringr::str_detect, ...)
+parallel::stopCluster(cl)
+}
 
 ## stringr::str_replace
-str.replace <- function(x, ...) 
-  parallel::pvec(x, stringr::str_replace, ..., mc.cores = parallel::detectCores())
+str.replace <- function(x, ...) {
+cl <- parallel::makeCluster(parallel::detectCores())
+parallel::clusterApply(cl, x, stringr::str_replace, ...)
+parallel::stopCluster(cl)
+}
 
 ## stringr::str_replace_all
-str.replace.all <- function(x, ...) 
-  parallel::pvec(x, stringr::str_replace_all, ..., mc.cores = parallel::detectCores())
+str.replace.all <- function(x, ...) {
+cl <- parallel::makeCluster(parallel::detectCores())
+parallel::clusterApply(cl, x, stringr::str_replace_all, ...)
+parallel::stopCluster(cl)
+}
 
 ## Load text function
 ## --------------------------------------------------------------------------------
@@ -363,6 +402,7 @@ sdc.parse.jv.csr <- function(records
   message("Parsing records...", appendLF = TRUE)
   sdc.parse.start <- Sys.time()
   sdc <- data.table::data.table()
+  cl <- parallel::makeCluster(parallel::detectCores())
   ## Participants
   if (any(c("name", "participants") %in% fields) | is.na(fields)) {
     message("\t\t\t- participants names..", appendLF = FALSE)
@@ -380,7 +420,7 @@ sdc.parse.jv.csr <- function(records
         name.line %>%
         str.replace("-+[^-/]*$", "") %>%
         stringi::stri_split_fixed("/") %>%
-        parallel::mclapply(stringr::str_trim)
+        parallel::parLapply(stringr::str_trim)
     message("\tdone")
   }
   ## Financial
@@ -389,7 +429,7 @@ sdc.parse.jv.csr <- function(records
     sdc$financial <-
       records %>% 
       sdc.parse.jv.csr.get.field("financial") %>% 
-      parallel::mclapply(sdc.parse.jv.csr.field.financial)
+      parallel::parLapply(sdc.parse.jv.csr.field.financial)
     message("\tdone")  
   }
   ## Date Announced
@@ -433,7 +473,7 @@ sdc.parse.jv.csr <- function(records
       records %>% 
       sdc.parse.jv.csr.get.field("involving") %>%
       stringi::stri_split_fixed("\n") %>%
-      parallel::mclapply(stringr::str_trim)
+      parallel::parLapply(stringr::str_trim)
     message("\tdone")  
   }
   ## Location
@@ -442,7 +482,7 @@ sdc.parse.jv.csr <- function(records
     sdc$location <-
       records %>% 
       sdc.parse.jv.csr.get.field("location") %>%
-      parallel::mclapply(sdc.parse.jv.csr.field.location)
+      parallel::parLapply(sdc.parse.jv.csr.field.location)
     message("\tdone")  
   }
   ## Synopsis
@@ -470,10 +510,11 @@ sdc.parse.jv.csr <- function(records
     sdc$participants.details <- 
       records %>% 
       sdc.parse.jv.csr.get.field("participants.details") %>% 
-      parallel::mclapply(sdc.parse.jv.csr.field.participants.details)
+      parallel::parLapply(sdc.parse.jv.csr.field.participants.details)
     message("\tdone")
   }
   ## Table
+  parallel::stopCluster(cl)
   message("\t\t\t\t\tDONE in ", dur.from(sdc.parse.start))
   ## data.table(name, name.line) %>% return()
   sdc %>% return()
