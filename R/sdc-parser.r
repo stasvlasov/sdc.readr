@@ -26,13 +26,20 @@ pipe.fun.list.n <- function(fun.list, x
                           , message = ".\t"
                           , appendLF = FALSE) {
   for(i in 1:length(fun.list)) {
-    message(i, ".\t", appendLF = FALSE)    
+    message(i, ".\t", appendLF = appendLF)    
     fun <- fun.list[[i]]
     x <- if (!is.list(fun)) fun(x)
          else do.call(fun[[1]], c(list(x), fun[-1]))
   }
   return(x)
 } 
+
+
+century.back <- function(x, year = 1950){
+  m <- lubridate::year(x) %% 100
+  lubridate::year(x) <- ifelse(m > year %% 100, 1900+m, 2000+m)
+  return(x)
+}
 
 ## c(0.3) %>% pipe.fun.list.n(list(sum, sqrt, log, abs))
 
@@ -179,6 +186,15 @@ plapply <- function(x, fun, ...) {
 ## system.time(lapply(1:4,function(x) Sys.sleep(1)))
 ## system.time(clusterApply(cl, 1:4,function(x) Sys.sleep(1)))
 
+
+## Unparallel
+## str.trim <- function(...) stringr::str_trim(...)
+## str.extract <- function(...) stringr::str_extract(...)
+## str.detect <- function(...) stringr::str_detect(...)
+## str.replace <- function(...) stringr::str_replace(...)
+## str.replace.all <- function(...) stringr::str_replace_all(...)
+## plapply <- function(...) lapply(...)
+
 ## Load text function
 ## --------------------------------------------------------------------------------
 #' @import magrittr
@@ -318,19 +334,21 @@ sdc.parse.jv.lp <- function(txt) {
 #' @import magrittr
 sdc.parse.jv.csr.get.field <- function(records, field, drop.first.record = TRUE) {
   regex <- c(date.announced = 
-               "(?<=Date Announced            :).*?(?=Deal Type :)"
+               "(?<=Date Announced            : )\\d+/\\d+/\\d+"
            , date.agreement = 
-               "(?<=Date Agreement Signed     :).*?(?=Involving :)"
+               "(?<=Date Agreement Signed     : )\\d+/\\d+/\\d+"
+           , date.terminated =
+               "(?<=Agreement Terminated as of: )\\d+/\\d+/\\d+"
            , deal.type = 
-               "(?<=Deal Type :).*?(?=\\n)"
+               "(?<=Deal Type :).*"
            , involving =
-               "(?s)(?<=Involving :).*?(?=Current Status :)"
+               "(?s)(?<=Involving :).*(?=Current Status :)"
            , status = 
-               "(?<=Current Status :).*?(?=\\n)"
+               "(?<=Current Status :).*"
            , synopsis = 
                "(?s)(?<=Synopsis:).*?(?=Location:)"  # (?s) is modifier: Make the dot match all characters including line break characters
            , location = 
-               "(?<=Location:).*?(?=\\n)"
+               "(?<=Location:).*"
            , participants.details = 
                "(?s)(?<=Details on participants:).*?={131}.*?(?=={131}|Main Venture Activity)"
            , financial = 
@@ -347,7 +365,6 @@ sdc.parse.jv.csr.get.field <- function(records, field, drop.first.record = TRUE)
 
 
 
-is.na(NULL)
 
 ## Parse separate fields
 #' @import magrittr
@@ -474,6 +491,7 @@ sdc.parse.jv.csr <- function(records
                              , "deal.type"
                              , "date.announced"
                              , "date.agreement"
+                             , "date.terminated"
                              , "involving"
                              , "location"
                              , "synopsis"
@@ -482,10 +500,9 @@ sdc.parse.jv.csr <- function(records
   message("Parsing records...", appendLF = TRUE)
   sdc.parse.start <- Sys.time()
   sdc <- data.table::data.table()
-  cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
   ## Participants
   if (any(c("name", "participants") %in% fields) | is.na(fields)) {
-    message("\t\t\t- participants names..", appendLF = FALSE)
+    message("\t - participants names..", appendLF = FALSE)
     name.line <-
       records %>%
       extract(-length(.)) %>% # drop last record
@@ -505,7 +522,7 @@ sdc.parse.jv.csr <- function(records
   }
   ## Financial
   if("financial" %in% fields | is.na(fields)) {
-    message("\t\t\t- financial details..", appendLF = FALSE)
+    message("\t - financial details..", appendLF = FALSE)
     sdc$financial <-
       records %>% 
       sdc.parse.jv.csr.get.field("financial") %>% 
@@ -514,79 +531,92 @@ sdc.parse.jv.csr <- function(records
   }
   ## Date Announced
   if("date.announced" %in% fields| is.na(fields)) {
-    message("\t\t\t- date announced..", appendLF = FALSE)
+    message("\t - date announced..", appendLF = FALSE)
     sdc$date.announced <-
       records %>% 
       sdc.parse.jv.csr.get.field("date.announced") %>%
-      lubridate::mdy()
+      lubridate::mdy() %>%
+      century.back
     message("\tdone")  
   }
   ## Date Agreement
   if("date.agreement" %in% fields| is.na(fields)) {
-    message("\t\t\t- date agreement..", appendLF = FALSE)
+    message("\t - date agreement..", appendLF = FALSE)
     sdc$date.agreement <-
       records %>% 
       sdc.parse.jv.csr.get.field("date.agreement") %>%
-      lubridate::mdy()
+      lubridate::mdy() %>%
+      century.back
+    message("\tdone")  
+  }
+  ## Date Terminated
+  if("date.terminated" %in% fields| is.na(fields)) {
+    message("\t - date terminated..", appendLF = FALSE)
+    sdc$date.terminated <-
+      records %>% 
+      sdc.parse.jv.csr.get.field("date.terminated") %>%
+      lubridate::mdy() %>%
+      century.back
     message("\tdone")  
   }
   ## Deal Type
   if("deal.type" %in% fields| is.na(fields)) {
-    message("\t\t\t- deal type..", appendLF = FALSE)
+    message("\t - deal type..", appendLF = FALSE)
     sdc$deal.type <-
       records %>% 
       sdc.parse.jv.csr.get.field("deal.type")
-    message("\tdone")  
+    message("\t\tdone")  
   }
   ## Status
   if("status" %in% fields| is.na(fields)) {
-    message("\t\t\t- status..", appendLF = FALSE)
+    message("\t - status..", appendLF = FALSE)
     sdc$status <-
       records %>% 
       sdc.parse.jv.csr.get.field("status")
-    message("\tdone")  
+    message("\t\tdone")  
   }
   ## Involving
   if("involving" %in% fields| is.na(fields)) {
-    message("\t\t\t- involving..", appendLF = FALSE)
+    message("\t - involving..", appendLF = FALSE)
     sdc$involving <-
       records %>% 
       sdc.parse.jv.csr.get.field("involving") %>%
+      str.replace("Agreement Terminated as of: \\d+/\\d+/\\d+", "") %>% 
       stringi::stri_split_fixed("\n") %>%
       plapply(stringr::str_trim)
-    message("\tdone")  
+    message("\t\tdone")  
   }
   ## Location
   if("location" %in% fields| is.na(fields)) {
-    message("\t\t\t- location..", appendLF = FALSE)
+    message("\t - location..", appendLF = FALSE)
     sdc$location <-
       records %>% 
       sdc.parse.jv.csr.get.field("location") %>%
       plapply(sdc.parse.jv.csr.field.location)
-    message("\tdone")  
+    message("\t\tdone")  
   }
   ## Synopsis
   if("synopsis" %in% fields| is.na(fields)) {
-    message("\t\t\t- synopsis..", appendLF = FALSE)
+    message("\t - synopsis..", appendLF = FALSE)
     sdc$synopsis <-
       records %>% 
       sdc.parse.jv.csr.get.field("synopsis") %>%
       stringr::str_replace_all("\\s+", " ")
-    message("\tdone")  
+    message("\t\tdone")  
   }
   ## Activity
   if("activity" %in% fields| is.na(fields)) {
-    message("\t\t\t- activity..", appendLF = FALSE)
+    message("\t - activity..", appendLF = FALSE)
     sdc$activity <-
       records %>% 
       sdc.parse.jv.csr.get.field("activity") %>%
       str.replace.all("[\\s-]+", " ") %>%
       str.trim
-    message("\tdone")
+    message("\t\tdone")
   }
   ## Participants Details
   if("participants.details" %in% fields| is.na(fields)) {
-    message("\t\t\t- participants details..", appendLF = FALSE)
+    message("\t - participants..", appendLF = FALSE)
     sdc$participants.details <- 
       records %>% 
       sdc.parse.jv.csr.get.field("participants.details") %>% 
@@ -594,9 +624,7 @@ sdc.parse.jv.csr <- function(records
     message("\tdone")
   }
   ## Table
-  parallel::stopCluster(cl)
-  message("\t\t\t\t\tDONE in ", dur.from(sdc.parse.start))
-  ## data.table(name, name.line) %>% return()
+  message("\tParsing records...\t\tDONE in ", dur.from(sdc.parse.start))
   sdc %>% return()
 }
 
@@ -620,7 +648,9 @@ sdc.read <- function(sdc.file.name
                    , sdc.dir = getwd()
                    , data.type = "jv"
                    , report.type = c("csr", "lp")
-                   , fields = NA) {
+                   , fields = NA
+                   , parallel = TRUE
+                   , test = FALSE) {
   ## File path is initial value for pipe.fun.list.n
   sdc.file.path <- file.path(sdc.dir
                            , sdc.file.name
@@ -628,28 +658,51 @@ sdc.read <- function(sdc.file.name
   message("--------------------------------------------------")
   message("= = = Reading SDC Platinum plain text export = = =")
   message("--------------------------------------------------")
+  message()
+  sdc.read.start <- Sys.time()
+  if(parallel) {
+    message("0.\t Setting cluster...", appendLF = FALSE)
+    cl.n <- parallel::detectCores()
+    cl <- parallel::makeCluster(cl.n, type='PSOCK')
+    message("\t\tDONE with ", cl.n, " cores")
+    message()
+  } else {
+    str.trim <<- function(...) stringr::str_trim(...)
+    str.extract <<- function(...) stringr::str_extract(...)
+    str.detect <<- function(...) stringr::str_detect(...)
+    str.replace <<- function(...) stringr::str_replace(...)
+    str.replace.all <<- function(...) stringr::str_replace_all(...)
+    plapply <<- function(...) lapply(...)
+  }
   ## Apply procedures and return data
-  if(data.type[1] == "jv") {
-    message("database:\t Joint Ventures")
-    if (report.type[1] == "lp") {
-      message("report:\t\t List of Participants")
-      list(
-        sdc.load
-      , sdc.clean.jv.lp
-      , sdc.parse.jv.lp
-      )
-    } else if (report.type[1] == "csr") {
-      message("report:\t Comprehensive Summary Report")
-      list(
-        list(sdc.load, test = FALSE)
-      , sdc.clean.jv.csr
-      , sdc.split.jv.csr
-      , list(sdc.parse.jv.csr, fields)
-      )
-    } else {
-      message("report:\t (error) Invalid type of report!")}
-  } %>%
+  sdc <- 
+    if(data.type[1] == "jv") {
+      message("database:\t Joint Ventures")
+      if (report.type[1] == "lp") {
+        message("report:\t\t List of Participants")
+        message()
+        list(
+          sdc.load
+        , sdc.clean.jv.lp
+        , sdc.parse.jv.lp
+        )
+      } else if (report.type[1] == "csr") {
+        message("report:\t Comprehensive Summary Report")
+        message()
+        list(
+          list(sdc.load, test = test)
+        , sdc.clean.jv.csr
+        , sdc.split.jv.csr
+        , list(sdc.parse.jv.csr, fields)
+        )
+      } else {
+        message("report:\t (error) Invalid type of report!")}
+    } %>%
     pipe.fun.list.n(sdc.file.path)
+  if(parallel) parallel::stopCluster(cl)
+  message()
+  message("Done Reading ", sdc.file.name, " in ", dur.from(sdc.read.start))
+  return(sdc)
 }
 
 
@@ -683,7 +736,7 @@ sdc.read.jv.lp <- function(...) {
 #' @md
 sdc.read.jv.csr <- function(...) {
   sdc.read(...
-            , sdc.dir = "../sdc-vjs"
-            , data.type = "jv"
-            , report.type = "csr")
+         , sdc.dir = "../sdc-vjs"
+         , data.type = "jv"
+         , report.type = "csr")
 }
