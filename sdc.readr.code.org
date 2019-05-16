@@ -768,7 +768,8 @@
         sdc.parse.jv.csr.get.field("involving") %>%
         str.replace("Agreement Terminated as of: \\d+/\\d+/\\d+", "") %>% 
         stringi::stri_split_fixed("\n") %>%
-        plapply(stringr::str_trim)
+        plapply(stringr::str_trim) %>%
+        plapply(function(x) x[x != ""])
       message("\t\tdone")  
     }
     ## Location
@@ -825,118 +826,118 @@
 :ID:       org:gfbgbzb09ci0
 :END:
 #+BEGIN_SRC R :results silent :session  :tangle R/sdc-parser.r :mkdirp yes
-    ## Read plain text reports from SDC Platinum database
-    ## Glue all functions of the package together
-    ## ================================================================================
-    #' @title  Read plain text reports from SDC Platinum database
-    #'
-    #' @description
-    #' It is a convenience function that makes it easier to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are welcome.
-    #' @param sdc.file.name Filename of SDC Platinum plain text report
-    #' @param sdc.dir Location of SDC Platinum plain text report. Current working directory is assumed by default.
-    #' @param data.type Type of SDC Platinum database. Only Joint Ventures - "jv" is currently supported. M&A, Venture Experts and so forth could be added in future. Default is "jv"
-    #' @param report.type Type of plain text report. Two types are currently supported. "csr" - Comprehensive Summary Report and "lp" - List of Participants. Default is "csr".
-    #' @param fields Which fields to parse from the report. Depends on report type. For the "csr" (Comprehensive Summary Report) following fields are available - "name", "participants", "participants.details", "financial", "deal.type", "date.announced", "date.agreement", "involving", "location", "synopsis", "activity". Default value is NA which means include all fields available. Specifying just a few fields increases speed of parsing.
-    #' @return A data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
-    #' @import magrittr
-    #' @export
-    #' @md
-    sdc.read <- function(sdc.file.name
-                       , sdc.dir = getwd()
-                       , data.type = "jv"
-                       , report.type = c("csr", "lp")
-                       , fields = NA
-                       , parallel = TRUE
-                       , test = FALSE) {
-      ## File path is initial value for pipe.fun.list.n
-      sdc.file.path <- file.path(sdc.dir
-                               , sdc.file.name
-                               , fsep = "/")
-      message("--------------------------------------------------")
-      message("= = = Reading SDC Platinum plain text export = = =")
-      message("--------------------------------------------------")
+  ## Read plain text reports from SDC Platinum database
+  ## Glue all functions of the package together
+  ## ================================================================================
+  #' @title  Read plain text reports from SDC Platinum database
+  #'
+  #' @description
+  #' It is a convenience function that makes it easier to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are welcome.
+  #' @param sdc.file.name Filename of SDC Platinum plain text report
+  #' @param sdc.dir Location of SDC Platinum plain text report. Current working directory is assumed by default.
+  #' @param data.type Type of SDC Platinum database. Only Joint Ventures - "jv" is currently supported. M&A, Venture Experts and so forth could be added in future. Default is "jv"
+  #' @param report.type Type of plain text report. Two types are currently supported. "csr" - Comprehensive Summary Report and "lp" - List of Participants. Default is "csr".
+  #' @param fields Which fields to parse from the report. Depends on report type. For the "csr" (Comprehensive Summary Report) following fields are available - "name", "participants", "participants.details", "financial", "deal.type", "date.announced", "date.agreement", "involving", "location", "synopsis", "activity". Default value is NA which means include all fields available. Specifying just a few fields increases speed of parsing.
+  #' @return A data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
+  #' @import magrittr
+  #' @export
+  #' @md
+  sdc.read <- function(sdc.file.name
+                     , sdc.dir = getwd()
+                     , data.type = "jv"
+                     , report.type = c("csr", "lp")
+                     , fields = NA
+                     , parallel = TRUE
+                     , test = FALSE) {
+    ## File path is initial value for pipe.fun.list.n
+    sdc.file.path <- file.path(sdc.dir
+                             , sdc.file.name
+                             , fsep = "/")
+    message("--------------------------------------------------")
+    message("= = = Reading SDC Platinum plain text export = = =")
+    message("--------------------------------------------------")
+    message()
+    sdc.read.start <- Sys.time()
+    if(parallel) {
+      message("0.\t Setting cluster...", appendLF = FALSE)
+      cl.n <- parallel::detectCores()
+      cl <<- parallel::makeCluster(cl.n, type='PSOCK')
+      message("\t\tDONE with ", cl.n, " cores")
       message()
-      sdc.read.start <- Sys.time()
-      if(parallel) {
-        message("0.\t Setting cluster...", appendLF = FALSE)
-        cl.n <- parallel::detectCores()
-        cl <- parallel::makeCluster(cl.n, type='PSOCK')
-        message("\t\tDONE with ", cl.n, " cores")
-        message()
-      } else {
-        str.trim <<- function(...) stringr::str_trim(...)
-        str.extract <<- function(...) stringr::str_extract(...)
-        str.detect <<- function(...) stringr::str_detect(...)
-        str.replace <<- function(...) stringr::str_replace(...)
-        str.replace.all <<- function(...) stringr::str_replace_all(...)
-        plapply <<- function(...) lapply(...)
-      }
-      ## Apply procedures and return data
-      sdc <- 
-        if(data.type[1] == "jv") {
-          message("database:\t Joint Ventures")
-          if (report.type[1] == "lp") {
-            message("report:\t\t List of Participants")
-            message()
-            list(
-              sdc.load
-            , sdc.clean.jv.lp
-            , sdc.parse.jv.lp
-            )
-          } else if (report.type[1] == "csr") {
-            message("report:\t Comprehensive Summary Report")
-            message()
-            list(
-              list(sdc.load, test = test)
-            , sdc.clean.jv.csr
-            , sdc.split.jv.csr
-            , list(sdc.parse.jv.csr, fields)
-            )
-          } else {
-            message("report:\t (error) Invalid type of report!")}
-        } %>%
-        pipe.fun.list.n(sdc.file.path)
-      if(parallel) parallel::stopCluster(cl)
-      message()
-      message("Done Reading ", sdc.file.name, " in ", dur.from(sdc.read.start))
-      return(sdc)
+    } else {
+      str.trim <<- function(...) stringr::str_trim(...)
+      str.extract <<- function(...) stringr::str_extract(...)
+      str.detect <<- function(...) stringr::str_detect(...)
+      str.replace <<- function(...) stringr::str_replace(...)
+      str.replace.all <<- function(...) stringr::str_replace_all(...)
+      plapply <<- function(...) lapply(...)
     }
+    ## Apply procedures and return data
+    sdc <- 
+      if(data.type[1] == "jv") {
+        message("database:\t Joint Ventures")
+        if (report.type[1] == "lp") {
+          message("report:\t\t List of Participants")
+          message()
+          list(
+            sdc.load
+          , sdc.clean.jv.lp
+          , sdc.parse.jv.lp
+          )
+        } else if (report.type[1] == "csr") {
+          message("report:\t Comprehensive Summary Report")
+          message()
+          list(
+            list(sdc.load, test = test)
+          , sdc.clean.jv.csr
+          , sdc.split.jv.csr
+          , list(sdc.parse.jv.csr, fields)
+          )
+        } else {
+          message("report:\t (error) Invalid type of report!")}
+      } %>%
+      pipe.fun.list.n(sdc.file.path)
+    if(parallel) parallel::stopCluster(cl)
+    message()
+    message("Done Reading ", sdc.file.name, " in ", dur.from(sdc.read.start))
+    return(sdc)
+  }
 
 
 
 
-    #' @title  Read Joint Ventures - List of Participants plain text reports from SDC Platinum database
-    #'
-    #' @description
-    #' A wrapper for sdc.read(..., data.type = "jv", report.type = "lp"). It is a convinience function that makes it easear to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are wellcome.
-    #' @param sdc.file.name Filename of SDC Platinum plain text report
-    #' @param sdc.dir Location of SDC Platinum plain text report, sdc.dir = "../sdc-vjs" is assumed by default.
-    #' @return A data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
-    #' @export
-    #' @md
-    sdc.read.jv.lp <- function(...) {
-      sdc.read(...
-             , sdc.dir = "../sdc-vjs"
-             , data.type = "jv"
-             , report.type = "lp")
-    }
+  #' @title  Read Joint Ventures - List of Participants plain text reports from SDC Platinum database
+  #'
+  #' @description
+  #' A wrapper for sdc.read(..., data.type = "jv", report.type = "lp"). It is a convinience function that makes it easear to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are wellcome.
+  #' @param sdc.file.name Filename of SDC Platinum plain text report
+  #' @param sdc.dir Location of SDC Platinum plain text report, sdc.dir = "../sdc-vjs" is assumed by default.
+  #' @return A data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
+  #' @export
+  #' @md
+  sdc.read.jv.lp <- function(...) {
+    sdc.read(...
+           , sdc.dir = "../sdc-vjs"
+           , data.type = "jv"
+           , report.type = "lp")
+  }
 
 
-    #' @title  Joint Ventures - Comprehensive Summary Report plain text reports from SDC Platinum database
-    #'
-    #' @description
-    #' A wrapper for sdc.read(..., data.type = "jv", report.type = "csr"). It is a convinience function that makes it easear to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are wellcome.
-    #' @param sdc.file.name Filename of SDC Platinum plain text report
-    #' @param sdc.dir Location of SDC Platinum plain text report. "../sdc-vjs" is assumed by default.
-    #' @return A data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
-    #' @export
-    #' @md
-    sdc.read.jv.csr <- function(...) {
-      sdc.read(...
-             , sdc.dir = "../sdc-vjs"
-             , data.type = "jv"
-             , report.type = "csr")
-    }
+  #' @title  Joint Ventures - Comprehensive Summary Report plain text reports from SDC Platinum database
+  #'
+  #' @description
+  #' A wrapper for sdc.read(..., data.type = "jv", report.type = "csr"). It is a convinience function that makes it easear to parse and clean the data from SDC Platinum plain text reports. Several types of reports are supported. However, not everything is yet covered so suggestions, feature requests and issues reports are wellcome.
+  #' @param sdc.file.name Filename of SDC Platinum plain text report
+  #' @param sdc.dir Location of SDC Platinum plain text report. "../sdc-vjs" is assumed by default.
+  #' @return A data.table where some of the columns are lists of vectors, lists and data.tables. Each row represents separate SDC record.
+  #' @export
+  #' @md
+  sdc.read.jv.csr <- function(...) {
+    sdc.read(...
+           , sdc.dir = "../sdc-vjs"
+           , data.type = "jv"
+           , report.type = "csr")
+  }
 
 #+END_SRC
 

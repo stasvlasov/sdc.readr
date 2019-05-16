@@ -583,7 +583,8 @@ sdc.parse.jv.csr <- function(records
       sdc.parse.jv.csr.get.field("involving") %>%
       str.replace("Agreement Terminated as of: \\d+/\\d+/\\d+", "") %>% 
       stringi::stri_split_fixed("\n") %>%
-      plapply(stringr::str_trim)
+      plapply(stringr::str_trim) %>%
+      plapply(function(x) x[x != ""])
     message("\t\tdone")  
   }
   ## Location
@@ -663,7 +664,7 @@ sdc.read <- function(sdc.file.name
   if(parallel) {
     message("0.\t Setting cluster...", appendLF = FALSE)
     cl.n <- parallel::detectCores()
-    cl <- parallel::makeCluster(cl.n, type='PSOCK')
+    cl <<- parallel::makeCluster(cl.n, type='PSOCK')
     message("\t\tDONE with ", cl.n, " cores")
     message()
   } else {
