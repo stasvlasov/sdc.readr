@@ -482,7 +482,7 @@ sdc.parse.jv.csr <- function(records
   message("Parsing records...", appendLF = TRUE)
   sdc.parse.start <- Sys.time()
   sdc <- data.table::data.table()
-  cl <- parallel::makeCluster(parallel::detectCores())
+  cl <- parallel::makeCluster(parallel::detectCores(), type='PSOCK')
   ## Participants
   if (any(c("name", "participants") %in% fields) | is.na(fields)) {
     message("\t\t\t- participants names..", appendLF = FALSE)
@@ -500,7 +500,7 @@ sdc.parse.jv.csr <- function(records
         name.line %>%
         str.replace("-+[^-/]*$", "") %>%
         stringi::stri_split_fixed("/") %>%
-        parallel::parLapply(stringr::str_trim)
+        plapply(stringr::str_trim)
     message("\tdone")
   }
   ## Financial
@@ -509,7 +509,7 @@ sdc.parse.jv.csr <- function(records
     sdc$financial <-
       records %>% 
       sdc.parse.jv.csr.get.field("financial") %>% 
-      parallel::parLapply(sdc.parse.jv.csr.field.financial)
+      plapply(sdc.parse.jv.csr.field.financial)
     message("\tdone")  
   }
   ## Date Announced
@@ -553,7 +553,7 @@ sdc.parse.jv.csr <- function(records
       records %>% 
       sdc.parse.jv.csr.get.field("involving") %>%
       stringi::stri_split_fixed("\n") %>%
-      parallel::parLapply(stringr::str_trim)
+      plapply(stringr::str_trim)
     message("\tdone")  
   }
   ## Location
@@ -562,7 +562,7 @@ sdc.parse.jv.csr <- function(records
     sdc$location <-
       records %>% 
       sdc.parse.jv.csr.get.field("location") %>%
-      parallel::parLapply(sdc.parse.jv.csr.field.location)
+      plapply(sdc.parse.jv.csr.field.location)
     message("\tdone")  
   }
   ## Synopsis
@@ -590,7 +590,7 @@ sdc.parse.jv.csr <- function(records
     sdc$participants.details <- 
       records %>% 
       sdc.parse.jv.csr.get.field("participants.details") %>% 
-      parallel::parLapply(sdc.parse.jv.csr.field.participants.details)
+      plapply(sdc.parse.jv.csr.field.participants.details)
     message("\tdone")
   }
   ## Table
