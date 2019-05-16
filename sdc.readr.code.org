@@ -196,36 +196,51 @@
   ## stringr::str_trim
   str.trim <- function(x, ...) {
   cl <- parallel::makeCluster(parallel::detectCores())
-  parallel::clusterApply(cl, x, stringr::str_trim, ...)
+  x <- clusterSplit(cl, x)
+  x <- parallel::clusterApply(cl, x, stringr::str_trim, ...)
+  x <- unlist(x, recursive = FALSE)
   parallel::stopCluster(cl)
+  return(x)
   }
 
   ## stringr::str_extract
   str.extract <- function(x, ...) {
   cl <- parallel::makeCluster(parallel::detectCores())
-  parallel::clusterApply(cl, x, stringr::str_extract, ...)
+  x <-  clusterSplit(cl, x)
+  x <- parallel::clusterApply(cl, x, stringr::str_extract, ...)
+  x <- unlist(x, recursive = FALSE)
   parallel::stopCluster(cl)
+  return(x)
   }
 
   ## stringr::str_detect
   str.detect <- function(x, ...) {
   cl <- parallel::makeCluster(parallel::detectCores())
-  parallel::clusterApply(cl, x, stringr::str_detect, ...)
+  x <-  clusterSplit(cl, x)
+  x <- parallel::clusterApply(cl, x, stringr::str_detect, ...)
+  x <- unlist(x, recursive = FALSE)
   parallel::stopCluster(cl)
+  return(x)
   }
 
   ## stringr::str_replace
   str.replace <- function(x, ...) {
   cl <- parallel::makeCluster(parallel::detectCores())
-  parallel::clusterApply(cl, x, stringr::str_replace, ...)
+  x <-  clusterSplit(cl, x)
+  x <- parallel::clusterApply(cl, x, stringr::str_replace, ...)
+  x <- unlist(x, recursive = FALSE)
   parallel::stopCluster(cl)
+  return(x)
   }
 
   ## stringr::str_replace_all
   str.replace.all <- function(x, ...) {
   cl <- parallel::makeCluster(parallel::detectCores())
-  parallel::clusterApply(cl, x, stringr::str_replace_all, ...)
+  x  <-  clusterSplit(cl, x)
+  x <- parallel::clusterApply(cl, x, stringr::str_replace_all, ...)
+  x  <- unlist(x, recursive = FALSE)
   parallel::stopCluster(cl)
+  return(x)
   }
 
 
