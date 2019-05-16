@@ -379,7 +379,7 @@ sdc.parse.jv.csr.field.participants.details  <- function(participants.txt) {
                   , participants.positions
                   , skip = 3)) %>%
     inset(!is.na(.$name), "id", 1:sum(!is.na(.$name))) %>%
-    inset( ,"id", na.locf(.$id)) %>%
+    inset( ,"id", zoo::na.locf(.$id)) %>%
     data.table::as.data.table() %>% 
     split(by = "id", keep.by = FALSE) %>% 
     lapply(function(p) {
